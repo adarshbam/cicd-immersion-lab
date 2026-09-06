@@ -1,0 +1,9 @@
+{
+  "name": "cicd-immersion-lab",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "mkdir -p dist && cp src/index.js dist/index.js"
+  }
+}
