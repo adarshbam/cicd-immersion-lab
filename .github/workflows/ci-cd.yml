@@ -28,6 +28,7 @@ jobs:
         run: npm run build
 
   cd:
+    needs: ci
     runs-on: ubuntu-latest
 
     steps:
