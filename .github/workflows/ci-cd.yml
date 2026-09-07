@@ -24,6 +24,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Wait for observation
+        run: sleep 20
+
       - name: Build application
         run: npm run build
 
