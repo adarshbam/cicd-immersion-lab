@@ -39,6 +39,6 @@ jobs:
         run: |
           echo "Starting deployment..."
           sleep 5
-          echo "Deploying application.."
+          echo "Deploying application."
           sleep 5
           echo "Deployment complete."
