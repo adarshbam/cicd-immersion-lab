@@ -10,12 +10,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
 
       - name: Install dependencies
         run: npm install
@@ -25,3 +25,15 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+  cd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Simulate deployment
+        run: |
+          echo "Starting deployment..."
+          sleep 5
+          echo "Deploying application..."
+          sleep 5
+          echo "Deployment complete."
