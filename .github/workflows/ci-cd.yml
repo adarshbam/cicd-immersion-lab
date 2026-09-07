@@ -28,7 +28,7 @@ jobs:
         run: sleep 20
 
       - name: Build application
-        run: npm run build-does-not-exist
+        run: npm run build
 
   cd:
     needs: ci
