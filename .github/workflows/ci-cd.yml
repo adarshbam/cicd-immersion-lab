@@ -55,6 +55,6 @@ jobs:
 
       - name: Simulate deployment
         run: |
-          echo "Starting deployment..."
+          echo "Starting deployment for latest commit..."
           sleep 120
           echo "Deployment complete."
