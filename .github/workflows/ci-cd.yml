@@ -27,6 +27,14 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Inspect configuration and secret
+        env:
+          APP_MODE: ${{ vars.APP_MODE }}
+          DEMO_SECRET: ${{ secrets.DEMO_SECRET }}
+        run: |
+          echo "APP_MODE=$APP_MODE"
+          echo "DEMO_SECRET=$DEMO_SECRET"
+
       - name: Record artifact version
         run: |
           echo "Commit: $GITHUB_SHA"
