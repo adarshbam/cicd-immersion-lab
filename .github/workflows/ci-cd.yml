@@ -10,25 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Inspect runner
-        run: |
-          echo "Runner name: $RUNNER_NAME"
-          echo "Runner OS: $RUNNER_OS"
-          echo "Runner architecture: $RUNNER_ARCH"
-          echo "Workspace:"
-          pwd
-          echo "Contents:"
-          ls -la
-          echo "Kernel:"
-          uname -a
-
       - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Create runner file
-        run: |
-          echo "created by CI job" > runner-file.txt
-          echo "CI job files:"
-          ls -la
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
 
   cd:
     needs: ci
@@ -42,13 +39,3 @@ jobs:
           echo "Deploying application."
           sleep 5
           echo "Deployment complete."
-      - name: Inspect filesystem
-        run: |
-          echo "Looking for runner-file.txt..."
-          ls -la
-          if [ -f runner-file.txt ]; then
-            echo "FOUND:"
-            cat runner-file.txt
-          else
-            echo "NOT FOUND"
-          fi
