@@ -24,6 +24,11 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Create runner file
+        run: |
+          echo "created by CI job" > runner-file.txt
+          echo "CI job files:"
+          ls -la
 
   cd:
     needs: ci
@@ -37,3 +42,13 @@ jobs:
           echo "Deploying application."
           sleep 5
           echo "Deployment complete."
+      - name: Inspect filesystem
+        run: |
+          echo "Looking for runner-file.txt..."
+          ls -la
+          if [ -f runner-file.txt ]; then
+            echo "FOUND:"
+            cat runner-file.txt
+          else
+            echo "NOT FOUND"
+          fi
