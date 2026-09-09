@@ -1,9 +1,7 @@
-name: CI
+name: CI and CD
 
 on:
   push:
-  pull_request:
-  workflow_dispatch:
 
 jobs:
   ci:
@@ -16,7 +14,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 23
 
       - name: Install dependencies
         run: npm install
@@ -26,14 +24,6 @@ jobs:
 
       - name: Build application
         run: npm run build
-
-      - name: Inspect configuration and secret
-        env:
-          APP_MODE: ${{ vars.APP_MODE }}
-          DEMO_SECRET: ${{ secrets.DEMO_SECRET }}
-        run: |
-          echo "APP_MODE=$APP_MODE"
-          echo "DEMO_SECRET=$DEMO_SECRET"
 
       - name: Record artifact version
         run: |
@@ -46,38 +36,25 @@ jobs:
           name: app-build
           path: dist/
 
-      - name: Inspect build
-        run: |
-          echo "Build output:"
-          find dist -maxdepth 2 -type f -print
-
   cd:
     needs: ci
     runs-on: ubuntu-latest
     environment: PROD
 
     steps:
-      - name: Show environment
-        env:
-          DEMO_ENV: ${{ vars.DEMO_ENV }}
-        run: |
-          echo "Environment: $DEMO_ENV"
-
       - name: Download build artifact
         uses: actions/download-artifact@v7
         with:
           name: app-build
           path: dist/
+
       - name: Verify artifact version
         run: |
           echo "Artifact was built from:"
           cat dist/commit.txt
-      - name: Look for CI build
+
+      - name: Simulate deployment
         run: |
-          echo "Looking for dist..."
-          if [ -d dist ]; then
-            echo "FOUND dist directory"
-            find dist -maxdepth 2 -type f -print
-          else
-            echo "dist does not exist"
-          fi
+          echo "Starting deployment..."
+          sleep 30
+          echo "Deployment complete."
