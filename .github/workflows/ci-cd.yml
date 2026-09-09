@@ -27,6 +27,11 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Record artifact version
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "$GITHUB_SHA" > dist/commit.txt
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
@@ -37,10 +42,7 @@ jobs:
         run: |
           echo "Build output:"
           find dist -maxdepth 2 -type f -print
-      - name: Record artifact version
-        run: |
-          echo "Commit: $GITHUB_SHA"
-          echo "$GITHUB_SHA" > dist/commit.txt
+
   cd:
     needs: ci
     runs-on: ubuntu-latest
