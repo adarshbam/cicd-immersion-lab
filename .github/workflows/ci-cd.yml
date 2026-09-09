@@ -27,15 +27,22 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Inspect build
+        run: |
+          echo "Build output:"
+          find dist -maxdepth 2 -type f -print
+
   cd:
     needs: ci
     runs-on: ubuntu-latest
 
     steps:
-      - name: Simulate deployment
+      - name: Look for CI build
         run: |
-          echo "Starting deployment..."
-          sleep 5
-          echo "Deploying application."
-          sleep 5
-          echo "Deployment complete."
+          echo "Looking for dist..."
+          if [ -d dist ]; then
+            echo "FOUND dist directory"
+            find dist -maxdepth 2 -type f -print
+          else
+            echo "dist does not exist"
+          fi
