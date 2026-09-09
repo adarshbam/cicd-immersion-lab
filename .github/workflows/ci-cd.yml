@@ -37,7 +37,10 @@ jobs:
         run: |
           echo "Build output:"
           find dist -maxdepth 2 -type f -print
-
+      - name: Record artifact version
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "$GITHUB_SHA" > dist/commit.txt
   cd:
     needs: ci
     runs-on: ubuntu-latest
@@ -48,6 +51,10 @@ jobs:
         with:
           name: app-build
           path: dist/
+      - name: Verify artifact version
+        run: |
+          echo "Artifact was built from:"
+          cat dist/commit.txt
       - name: Look for CI build
         run: |
           echo "Looking for dist..."
