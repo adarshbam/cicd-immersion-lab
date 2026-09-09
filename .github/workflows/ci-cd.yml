@@ -54,7 +54,7 @@ jobs:
   cd:
     needs: ci
     runs-on: ubuntu-latest
-    environment: TEST
+    environment: PROD
 
     steps:
       - name: Show environment
