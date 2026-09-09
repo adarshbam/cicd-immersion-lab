@@ -54,8 +54,15 @@ jobs:
   cd:
     needs: ci
     runs-on: ubuntu-latest
+    environment: TEST
 
     steps:
+      - name: Show environment
+        env:
+          DEMO_ENV: ${{ vars.DEMO_ENV }}
+        run: |
+          echo "Environment: $DEMO_ENV"
+
       - name: Download build artifact
         uses: actions/download-artifact@v7
         with:
