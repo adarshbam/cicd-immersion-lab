@@ -3,6 +3,10 @@ name: CI and CD
 on:
   push:
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -14,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 23
+          node-version: 24
 
       - name: Install dependencies
         run: npm install
@@ -43,7 +47,7 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: app-build
           path: dist/
@@ -55,6 +59,6 @@ jobs:
 
       - name: Simulate deployment
         run: |
-          echo "Starting deployment for latest commit..."
+          echo "Starting deployment..."
           sleep 30
           echo "Deployment complete."
