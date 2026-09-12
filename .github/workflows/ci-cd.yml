@@ -28,4 +28,4 @@ jobs:
         env:
           MESSAGE: ${{ inputs.message }}
         run: |
-          printf '%s\n' "$MESSAGE"
+          printf '%s\n'  "$MESSAGE"
