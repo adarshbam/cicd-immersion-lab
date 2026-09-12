@@ -1,31 +1,55 @@
-name: Security Experiment
+name: CI and CD
 
 on:
-  workflow_dispatch:
-    inputs:
-      message:
-        description: "Test input"
-        required: true
-        type: string
+  push:
+    branches:
+      - main
+      - develop
 
 permissions:
   contents: read
 
 jobs:
-  unsafe:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Unsafe input handling
-        run: |
-          echo "${{ inputs.message }}"
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-  safe:
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+  deploy-test:
+    if: github.ref == 'refs/heads/develop'
+    needs: ci
     runs-on: ubuntu-latest
+    environment: TEST
 
     steps:
-      - name: Safe input handling
-        env:
-          MESSAGE: ${{ inputs.message }}
+      - name: Deploy to TEST
         run: |
-          printf '%s\n'  "$MESSAGE"
+          echo "Deploying commit $GITHUB_SHA to TEST"
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: PROD
+
+    steps:
+      - name: Deploy to PROD
+        run: |
+          echo "Deploying commit $GITHUB_SHA to PROD"
