@@ -31,11 +31,18 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Package release metadata
+      - name: Create release metadata
         run: |
-          cp src/release.js dist/release.js
-          echo "Commit: $GITHUB_SHA"
-          echo "Commit: $GITHUB_SHA" > dist/commit.txt
+          VERSION=$(grep 'version:' src/release.js | sed 's/.*"\(v[0-9]*\)".*/\1/')
+          HEALTH=$(grep 'healthy:' src/release.js | sed 's/.*healthy: \(true\|false\).*/\1/')
+
+          echo "$VERSION" > dist/release-version.txt
+          echo "$HEALTH" > dist/release-health.txt
+
+          echo "Release: $VERSION"
+          echo "Health: $HEALTH"
+
+          echo "$GITHUB_SHA" > dist/commit.txt
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
@@ -64,11 +71,13 @@ jobs:
         run: |
           set -e
 
-          RELEASE=$(grep 'version:' dist/release.js | sed 's/.*"\(.*\)".*/\1/')
-          HEALTHY=$(grep 'healthy:' dist/release.js | sed 's/.*: \(.*\)/\1/')
+          RELEASE=$(cat dist/release-version.txt)
+          HEALTH=$(cat dist/release-health.txt)
+          COMMIT=$(cat dist/commit.txt)
 
           echo "Deploying release: $RELEASE"
-          echo "Expected health: $HEALTHY"
+          echo "Commit: $COMMIT"
+          echo "Expected health: $HEALTH"
 
           git fetch origin deployment-state:refs/remotes/origin/deployment-state || true
 
@@ -79,8 +88,8 @@ jobs:
           fi
 
           echo "$RELEASE" > production-version.txt
-          echo "$GITHUB_SHA" > production-commit.txt
-          echo "$HEALTHY" > production-health.txt
+          echo "$COMMIT" > production-commit.txt
+          echo "$HEALTH" > production-health.txt
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -92,6 +101,8 @@ jobs:
 
       - name: Health check
         run: |
+          set -e
+
           VERSION=$(cat production-version.txt)
           HEALTH=$(cat production-health.txt)
 
