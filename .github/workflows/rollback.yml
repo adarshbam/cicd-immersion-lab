@@ -1,0 +1,91 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Workflow run ID containing the release to deploy"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download selected release artifact
+        uses: actions/download-artifact@v8
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Inspect rollback release
+        run: |
+          set -e
+
+          VERSION=$(cat dist/release-version.txt)
+          HEALTH=$(cat dist/release-health.txt)
+          COMMIT=$(cat dist/commit.txt)
+
+          echo "Rollback target:"
+          echo "Version: $VERSION"
+          echo "Commit: $COMMIT"
+          echo "Expected health: $HEALTH"
+
+      - name: Deploy rollback release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          VERSION=$(cat dist/release-version.txt)
+          HEALTH=$(cat dist/release-health.txt)
+          COMMIT=$(cat dist/commit.txt)
+
+          echo "Rolling back production to $VERSION"
+          echo "Commit: $COMMIT"
+
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+
+          cd repo
+
+          git fetch origin deployment-state:refs/remotes/origin/deployment-state
+
+          git switch -C deployment-state origin/deployment-state
+
+          echo "$VERSION" > production-version.txt
+          echo "$COMMIT" > production-commit.txt
+          echo "$HEALTH" > production-health.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add production-version.txt production-commit.txt production-health.txt
+          git commit -m "Rollback production to $VERSION"
+
+          git push origin HEAD:deployment-state
+
+      - name: Verify rollback health
+        run: |
+          set -e
+
+          VERSION=$(cat dist/release-version.txt)
+          HEALTH=$(cat dist/release-health.txt)
+
+          echo "Verifying rollback:"
+          echo "Version: $VERSION"
+          echo "Health: $HEALTH"
+
+          if [ "$HEALTH" != "true" ]; then
+            echo "Rollback target is unhealthy"
+            exit 1
+          fi
+
+          echo "Rollback health check PASSED"
