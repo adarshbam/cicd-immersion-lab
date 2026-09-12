@@ -1,4 +1,4 @@
 module.exports = {
-  version: "v1",
+  version: "v2",
   healthy: true,
 };
