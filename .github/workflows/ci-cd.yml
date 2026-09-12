@@ -2,10 +2,11 @@ name: CI and CD
 
 on:
   push:
+    branches:
+      - main
 
-concurrency:
-  group: production-deployment
-  cancel-in-progress: true
+permissions:
+  contents: write
 
 jobs:
   ci:
@@ -29,36 +30,48 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Record artifact version
-        run: |
-          echo "Commit: $GITHUB_SHA"
-          echo "$GITHUB_SHA" > dist/commit.txt
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: app-build
-          path: dist/
-
   cd:
     needs: ci
     runs-on: ubuntu-latest
-    environment: PROD
 
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: app-build
-          path: dist/
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      - name: Verify artifact version
+      - name: Record deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Artifact was built from:"
-          cat dist/commit.txt
+          set -e
 
-      - name: Simulate deployment
-        run: |
-          echo "Starting deployment for newer commit..."
-          sleep 10
-          echo "Deployment complete."
+          git fetch origin deployment-state:refs/remotes/origin/deployment-state || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/deployment-state; then
+            git switch -C deployment-state origin/deployment-state
+          else
+            git switch -c deployment-state
+          fi
+
+          if [ -f deployment-counter.txt ]; then
+            COUNT=$(cat deployment-counter.txt)
+          else
+            COUNT=0
+          fi
+
+          COUNT=$((COUNT + 1))
+
+          echo "$COUNT" > deployment-counter.txt
+
+          echo "Deployment #$COUNT"
+          echo "Run ID: $GITHUB_RUN_ID"
+          echo "Run attempt: $GITHUB_RUN_ATTEMPT"
+          echo "Commit: $GITHUB_SHA"
+
+          echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT sha=$GITHUB_SHA" >> deployment-history.log
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add deployment-counter.txt deployment-history.log
+          git commit -m "Record deployment #$COUNT"
+          git push origin HEAD:deployment-state
