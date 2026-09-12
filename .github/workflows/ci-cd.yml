@@ -1,117 +1,31 @@
-name: CI and CD
+name: Security Experiment
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Test input"
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  ci:
+  unsafe:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests
-        run: npm test
-
-      - name: Build application
-        run: npm run build
-
-      - name: Create release metadata
+      - name: Unsafe input handling
         run: |
-          VERSION=$(grep 'version:' src/release.js | sed 's/.*"\(v[0-9]*\)".*/\1/')
-          HEALTH=$(grep 'healthy:' src/release.js | sed 's/.*healthy: \(true\|false\).*/\1/')
+          echo "${{ inputs.message }}"
 
-          echo "$VERSION" > dist/release-version.txt
-          echo "$HEALTH" > dist/release-health.txt
-
-          echo "Release: $VERSION"
-          echo "Health: $HEALTH"
-
-          echo "$GITHUB_SHA" > dist/commit.txt
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-${{ github.sha }}
-          path: dist/
-
-  cd:
-    needs: ci
+  safe:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Download release artifact
-        uses: actions/download-artifact@v8
-        with:
-          pattern: release-*
-          path: dist
-          merge-multiple: true
-
-      - name: Deploy release
+      - name: Safe input handling
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: ${{ inputs.message }}
         run: |
-          set -e
-
-          RELEASE=$(cat dist/release-version.txt)
-          HEALTH=$(cat dist/release-health.txt)
-          COMMIT=$(cat dist/commit.txt)
-
-          echo "Deploying release: $RELEASE"
-          echo "Commit: $COMMIT"
-          echo "Expected health: $HEALTH"
-
-          git fetch origin deployment-state:refs/remotes/origin/deployment-state || true
-
-          if git show-ref --verify --quiet refs/remotes/origin/deployment-state; then
-            git switch -C deployment-state origin/deployment-state
-          else
-            git switch -c deployment-state
-          fi
-
-          echo "$RELEASE" > production-version.txt
-          echo "$COMMIT" > production-commit.txt
-          echo "$HEALTH" > production-health.txt
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add production-version.txt production-commit.txt production-health.txt
-          git commit -m "Deploy $RELEASE" || echo "No deployment state changes"
-
-          git push origin HEAD:deployment-state
-
-      - name: Health check
-        run: |
-          set -e
-
-          VERSION=$(cat production-version.txt)
-          HEALTH=$(cat production-health.txt)
-
-          echo "Checking deployed version: $VERSION"
-          echo "Reported health: $HEALTH"
-
-          if [ "$HEALTH" != "true" ]; then
-            echo "Health check FAILED"
-            exit 1
-          fi
-
-          echo "Health check PASSED"
+          printf '%s\n' "$MESSAGE"
