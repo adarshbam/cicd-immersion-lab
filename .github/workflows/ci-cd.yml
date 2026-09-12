@@ -20,6 +20,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          package-manager-cache: false
 
       - name: Install dependencies
         run: npm install
@@ -30,6 +31,18 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Package release metadata
+        run: |
+          cp src/release.js dist/release.js
+          echo "Commit: $GITHUB_SHA"
+          echo "Commit: $GITHUB_SHA" > dist/commit.txt
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ github.sha }}
+          path: dist/
+
   cd:
     needs: ci
     runs-on: ubuntu-latest
@@ -38,11 +51,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Record deployment
+      - name: Download release artifact
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Deploy release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
+
+          RELEASE=$(grep 'version:' dist/release.js | sed 's/.*"\(.*\)".*/\1/')
+          HEALTHY=$(grep 'healthy:' dist/release.js | sed 's/.*: \(.*\)/\1/')
+
+          echo "Deploying release: $RELEASE"
+          echo "Expected health: $HEALTHY"
 
           git fetch origin deployment-state:refs/remotes/origin/deployment-state || true
 
@@ -52,26 +78,29 @@ jobs:
             git switch -c deployment-state
           fi
 
-          if [ -f deployment-counter.txt ]; then
-            COUNT=$(cat deployment-counter.txt)
-          else
-            COUNT=0
-          fi
-
-          COUNT=$((COUNT + 1))
-
-          echo "$COUNT" > deployment-counter.txt
-
-          echo "Deployment #$COUNT"
-          echo "Run ID: $GITHUB_RUN_ID"
-          echo "Run attempt: $GITHUB_RUN_ATTEMPT"
-          echo "Commit: $GITHUB_SHA"
-
-          echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT sha=$GITHUB_SHA" >> deployment-history.log
+          echo "$RELEASE" > production-version.txt
+          echo "$GITHUB_SHA" > production-commit.txt
+          echo "$HEALTHY" > production-health.txt
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add deployment-counter.txt deployment-history.log
-          git commit -m "Record deployment #$COUNT"
+          git add production-version.txt production-commit.txt production-health.txt
+          git commit -m "Deploy $RELEASE" || echo "No deployment state changes"
+
           git push origin HEAD:deployment-state
+
+      - name: Health check
+        run: |
+          VERSION=$(cat production-version.txt)
+          HEALTH=$(cat production-health.txt)
+
+          echo "Checking deployed version: $VERSION"
+          echo "Reported health: $HEALTH"
+
+          if [ "$HEALTH" != "true" ]; then
+            echo "Health check FAILED"
+            exit 1
+          fi
+
+          echo "Health check PASSED"
