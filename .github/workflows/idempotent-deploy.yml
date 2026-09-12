@@ -1,0 +1,74 @@
+name: Idempotent Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Release to deploy"
+        required: true
+        type: string
+        default: "v3"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Deploy desired release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESIRED_RELEASE: ${{ inputs.release }}
+        run: |
+          set -e
+
+          echo "Requested release: $DESIRED_RELEASE"
+
+          git fetch origin deployment-state:refs/remotes/origin/deployment-state
+
+          git switch -C deployment-state origin/deployment-state
+
+          mkdir -p production
+
+          if [ -f production/current-release.txt ]; then
+            CURRENT_RELEASE=$(cat production/current-release.txt)
+          else
+            CURRENT_RELEASE="none"
+          fi
+
+          if [ -f production/current-commit.txt ]; then
+            CURRENT_COMMIT=$(cat production/current-commit.txt)
+          else
+            CURRENT_COMMIT="none"
+          fi
+
+          echo "Currently deployed: $CURRENT_RELEASE"
+          echo "Current commit: $CURRENT_COMMIT"
+
+          if [ "$CURRENT_RELEASE" = "$DESIRED_RELEASE" ]; then
+            echo "✅ Desired release is already deployed."
+            echo "No state change required."
+            exit 0
+          fi
+
+          echo "🚀 Changing production from $CURRENT_RELEASE to $DESIRED_RELEASE"
+
+          echo "$DESIRED_RELEASE" > production/current-release.txt
+          echo "$GITHUB_SHA" > production/current-commit.txt
+          echo "Running release: $DESIRED_RELEASE" > production/app.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add production/
+
+          git commit -m "Deploy desired release $DESIRED_RELEASE"
+
+          git push origin HEAD:deployment-state
+
+          echo "✅ Production is now running $DESIRED_RELEASE"

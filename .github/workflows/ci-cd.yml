@@ -3,7 +3,6 @@ name: CI and CD
 on:
   push:
     branches:
-      - main
       - develop
 
 permissions:
